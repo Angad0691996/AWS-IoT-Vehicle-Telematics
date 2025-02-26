@@ -5,3 +5,4 @@ This project enables real-time vehicle telemetry data collection, storage, and v
 
 For data visualization, Grafana is deployed on the cloud to provide real-time insights into vehicle performance, diagnostics, and driver behavior. The system allows for future enhancements, including predictive maintenance, anomaly detection, and AI-driven analytics
 
+Vehicle IoT Device → AWS IoT Core → EC2 (MySQL) → Grafana Dashboard
