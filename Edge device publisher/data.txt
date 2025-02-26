@@ -1,0 +1,65 @@
+{
+    "vehicle_id": "VIN12345XYZ",
+    "model": "Tesla Model 3",
+    "make": "Tesla",
+    "year": 2022,
+    "odometer": 25000,
+    "vehicle_mode": "Moving",
+
+    "location": {
+        "latitude": 37.7749,
+        "longitude": -122.4194,
+        "altitude": 15.0,
+        "speed": 65,
+        "heading": "North",
+        "trip_distance": 120.5,
+        "route_history": [
+            {"lat": 37.7740, "lon": -122.4185, "timestamp": "2025-02-26T12:00:00Z"},
+            {"lat": 37.7730, "lon": -122.4175, "timestamp": "2025-02-26T12:01:00Z"}
+        ]
+    },
+
+    "engine_performance": {
+        "rpm": 3000,
+        "throttle_position": 45,
+        "fuel_level": 70,
+        "fuel_consumption": 6.5,
+        "battery_voltage": 12.5,
+        "oil_pressure": 40,
+        "coolant_temperature": 90
+    },
+
+    "diagnostics": {
+        "check_engine_light": false,
+        "obd_codes": [],
+        "brake_wear": 80,
+        "tire_pressure": {
+            "front_left": 32,
+            "front_right": 32,
+            "rear_left": 30,
+            "rear_right": 30
+        },
+        "transmission_status": "Drive"
+    },
+
+    "environment": {
+        "outside_temperature": 22,
+        "road_condition": "Dry",
+        "weather": "Sunny"
+    },
+
+    "driver_behavior": {
+        "harsh_acceleration": false,
+        "harsh_braking": false,
+        "cornering_gforce": 0.8,
+        "seat_belt_status": "Fastened",
+        "airbag_deployment": false,
+        "fatigue_alert": false
+    },
+
+    "connectivity": {
+        "network_signal": "Good",
+        "data_transmission": "Active",
+        "cloud_sync": "2025-02-26T12:05:00Z"
+    }
+}
