@@ -5,7 +5,7 @@ pipeline {
         EC2_USER = 'ubuntu'
         EC2_HOST = '13.232.172.49'
         SSH_CREDENTIALS_ID = 'ec2-ssh-key'
-        DOCKER_IMAGE = 'your-dockerhub-username/iot-subscriber:latest'
+        DOCKER_IMAGE = 'angad/iot-subscriber:latest'
     }
 
     stages {
@@ -20,24 +20,35 @@ pipeline {
                 sshagent(['ec2-ssh-key']) {
                     sh '''
                     ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST <<EOF
-                    # Update package list
                     sudo apt update && sudo apt upgrade -y
-                    
-                    # Install MySQL
-                    sudo apt install -y mysql-server
-                    sudo systemctl enable mysql
-                    sudo systemctl start mysql
 
-                    # Install Python and dependencies
+                    # Ensure Docker is installed
+                    if ! command -v docker &> /dev/null; then
+                        sudo apt install -y docker.io
+                        sudo systemctl enable docker
+                        sudo systemctl start docker
+                        sudo usermod -aG docker ubuntu
+                    fi
+
+                    # Install MySQL if not installed
+                    if ! command -v mysql &> /dev/null; then
+                        sudo apt install -y mysql-server
+                        sudo systemctl enable mysql
+                        sudo systemctl start mysql
+                    fi
+
+                    # Install Python
                     sudo apt install -y python3 python3-pip python3-venv
 
-                    # Install Grafana
-                    sudo apt install -y apt-transport-https software-properties-common wget
-                    wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
-                    echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
-                    sudo apt update && sudo apt install -y grafana
-                    sudo systemctl enable grafana-server
-                    sudo systemctl start grafana-server
+                    # Install Grafana if not installed
+                    if ! command -v grafana-server &> /dev/null; then
+                        sudo apt install -y apt-transport-https software-properties-common wget
+                        wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+                        echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+                        sudo apt update && sudo apt install -y grafana
+                        sudo systemctl enable grafana-server
+                        sudo systemctl start grafana-server
+                    fi
                     EOF
                     '''
                 }
@@ -72,7 +83,7 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
+                withDockerRegistry([credentialsId: 'docker-hub-credentials', url: 'https://index.docker.io/v1/']) {
                     sh '''
                     docker tag iot-subscriber $DOCKER_IMAGE
                     docker push $DOCKER_IMAGE
