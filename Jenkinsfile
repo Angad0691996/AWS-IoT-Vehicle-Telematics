@@ -11,7 +11,11 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/Angad0691996/AWS-IoT-Vehicle-Telematics.git'
+                git(
+                    branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: 'https://github.com/Angad0691996/AWS-IoT-Vehicle-Telematics.git'
+                )
             }
         }
 
@@ -27,7 +31,7 @@ pipeline {
                         sudo apt install -y docker.io
                         sudo systemctl enable docker
                         sudo systemctl start docker
-                        sudo usermod -aG docker ubuntu
+                        sudo usermod -aG docker $EC2_USER
                     fi
 
                     # Install MySQL if not installed
@@ -77,7 +81,9 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t iot-subscriber .'
+                sh '''
+                sudo docker build -t $DOCKER_IMAGE .
+                '''
             }
         }
 
@@ -85,8 +91,8 @@ pipeline {
             steps {
                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: 'https://index.docker.io/v1/']) {
                     sh '''
-                    docker tag iot-subscriber $DOCKER_IMAGE
-                    docker push $DOCKER_IMAGE
+                    sudo docker tag $DOCKER_IMAGE
+                    sudo docker push $DOCKER_IMAGE
                     '''
                 }
             }
@@ -102,17 +108,13 @@ pipeline {
                     ]) {
                         sh '''
                         ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST <<EOF
-                        export MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASS
-                        export MYSQL_IOT_USER_PASSWORD=$MYSQL_IOT_PASS
-                        export GRAFANA_ADMIN_PASSWORD=$GRAFANA_PASS
-
-                        docker pull $DOCKER_IMAGE
-                        docker stop iot-subscriber || true
-                        docker rm iot-subscriber || true
-                        docker run -d -p 5000:5000 --name iot-subscriber \
-                            -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD \
-                            -e MYSQL_IOT_USER_PASSWORD=$MYSQL_IOT_USER_PASSWORD \
-                            -e GRAFANA_ADMIN_PASSWORD=$GRAFANA_ADMIN_PASSWORD \
+                        sudo docker pull $DOCKER_IMAGE
+                        sudo docker stop iot-subscriber || true
+                        sudo docker rm iot-subscriber || true
+                        sudo docker run -d -p 5000:5000 --name iot-subscriber \
+                            -e MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASS \
+                            -e MYSQL_IOT_USER_PASSWORD=$MYSQL_IOT_PASS \
+                            -e GRAFANA_ADMIN_PASSWORD=$GRAFANA_PASS \
                             $DOCKER_IMAGE
                         EOF
                         '''
@@ -125,7 +127,7 @@ pipeline {
             steps {
                 sshagent(['ec2-ssh-key']) {
                     sh '''
-                    ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "docker ps | grep iot-subscriber"
+                    ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "sudo docker ps | grep iot-subscriber"
                     '''
                 }
             }
