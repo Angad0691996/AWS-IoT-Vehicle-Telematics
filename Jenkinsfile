@@ -21,38 +21,30 @@ pipeline {
 
         stage('Setup EC2 Environment') {
             steps {
-                sshagent(['ec2-ssh-key']) {
+                sshagent([SSH_CREDENTIALS_ID]) {
                     sh '''
                     ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST <<EOF
+                    echo "Updating EC2 and installing dependencies..."
                     sudo apt update && sudo apt upgrade -y
-
-                    # Ensure Docker is installed
+                    
+                    # Install Docker if not installed
                     if ! command -v docker &> /dev/null; then
+                        echo "Installing Docker..."
                         sudo apt install -y docker.io
-                        sudo systemctl enable docker
-                        sudo systemctl start docker
+                        sudo systemctl enable --now docker
                         sudo usermod -aG docker $EC2_USER
                     fi
 
                     # Install MySQL if not installed
                     if ! command -v mysql &> /dev/null; then
+                        echo "Installing MySQL..."
                         sudo apt install -y mysql-server
-                        sudo systemctl enable mysql
-                        sudo systemctl start mysql
+                        sudo systemctl enable --now mysql
                     fi
 
-                    # Install Python
-                    sudo apt install -y python3 python3-pip python3-venv
-
-                    # Install Grafana if not installed
-                    if ! command -v grafana-server &> /dev/null; then
-                        sudo apt install -y apt-transport-https software-properties-common wget
-                        wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
-                        echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
-                        sudo apt update && sudo apt install -y grafana
-                        sudo systemctl enable grafana-server
-                        sudo systemctl start grafana-server
-                    fi
+                    # Install Python3 & Grafana if needed
+                    sudo apt install -y python3 python3-pip python3-venv grafana
+                    sudo systemctl enable --now grafana-server
                     EOF
                     '''
                 }
@@ -61,17 +53,20 @@ pipeline {
 
         stage('Setup MySQL Database') {
             steps {
-                sshagent(['ec2-ssh-key']) {
+                sshagent([SSH_CREDENTIALS_ID]) {
                     withCredentials([
                         string(credentialsId: 'mysql-root-password', variable: 'MYSQL_ROOT_PASS'),
                         string(credentialsId: 'mysql-iot-user-password', variable: 'MYSQL_IOT_PASS')
                     ]) {
                         sh '''
                         ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST <<EOF
-                        sudo mysql -e "CREATE DATABASE IF NOT EXISTS vehicle_data;"
-                        sudo mysql -e "CREATE USER IF NOT EXISTS 'iot_user'@'%' IDENTIFIED BY '$MYSQL_IOT_PASS';"
-                        sudo mysql -e "GRANT ALL PRIVILEGES ON vehicle_data.* TO 'iot_user'@'%';"
-                        sudo mysql -e "FLUSH PRIVILEGES;"
+                        echo "Configuring MySQL..."
+                        sudo mysql <<MYSQL_SCRIPT
+                        CREATE DATABASE IF NOT EXISTS vehicle_data;
+                        CREATE USER IF NOT EXISTS 'iot_user'@'%' IDENTIFIED BY '$MYSQL_IOT_PASS';
+                        GRANT ALL PRIVILEGES ON vehicle_data.* TO 'iot_user'@'%';
+                        FLUSH PRIVILEGES;
+                        MYSQL_SCRIPT
                         EOF
                         '''
                     }
@@ -82,6 +77,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh '''
+                echo "Building Docker Image..."
                 sudo docker build -t $DOCKER_IMAGE .
                 '''
             }
@@ -91,7 +87,8 @@ pipeline {
             steps {
                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: 'https://index.docker.io/v1/']) {
                     sh '''
-                    sudo docker tag $DOCKER_IMAGE
+                    echo "Tagging and Pushing Docker Image..."
+                    sudo docker tag $DOCKER_IMAGE $DOCKER_IMAGE
                     sudo docker push $DOCKER_IMAGE
                     '''
                 }
@@ -100,7 +97,7 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                sshagent(['ec2-ssh-key']) {
+                sshagent([SSH_CREDENTIALS_ID]) {
                     withCredentials([
                         string(credentialsId: 'mysql-root-password', variable: 'MYSQL_ROOT_PASS'),
                         string(credentialsId: 'mysql-iot-user-password', variable: 'MYSQL_IOT_PASS'),
@@ -108,6 +105,7 @@ pipeline {
                     ]) {
                         sh '''
                         ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST <<EOF
+                        echo "Deploying Docker Container..."
                         sudo docker pull $DOCKER_IMAGE
                         sudo docker stop iot-subscriber || true
                         sudo docker rm iot-subscriber || true
@@ -125,8 +123,9 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                sshagent(['ec2-ssh-key']) {
+                sshagent([SSH_CREDENTIALS_ID]) {
                     sh '''
+                    echo "Verifying Deployment..."
                     ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST "sudo docker ps | grep iot-subscriber"
                     '''
                 }
