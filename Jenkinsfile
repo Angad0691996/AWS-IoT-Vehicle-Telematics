@@ -4,9 +4,6 @@ pipeline {
         APP_DIR = "/opt/iot-app"
         VENV_DIR = "$APP_DIR/venv"
         SUBSCRIBER_PATH = "AWS-IoT-Vehicle-Telematics/Edge device publisher/ec2_subscriber.py"
-        DB_ROOT_PASS = credentials('MYSQL_ROOT_PASSWORD')
-        GRAFANA_USER = credentials('GRAFANA_CREDENTIALS_USER')
-        GRAFANA_PASS = credentials('GRAFANA_CREDENTIALS_PASSWORD')
     }
     stages {
         stage('Install System Packages') {
@@ -47,30 +44,24 @@ pipeline {
 
         stage('Verify MySQL Connection') {
             steps {
-                script {
-                    sh '''
-                        mysql -uroot -p$DB_ROOT_PASS -h localhost -e "SHOW DATABASES;"
-                    '''
+                withCredentials([string(credentialsId: 'MYSQL_ROOT_PASSWORD', variable: 'DB_ROOT_PASS')]) {
+                    script {
+                        sh '''
+                            mysql -uroot -p$DB_ROOT_PASS -h localhost -e "SHOW DATABASES;"
+                        '''
+                    }
                 }
             }
         }
 
         stage('Verify Grafana Connection') {
             steps {
-                script {
-                    sh '''
-                        curl -u $GRAFANA_USER:$GRAFANA_PASS http://localhost:3000/api/health || echo "Grafana not reachable"
-                    '''
-                }
-            }
-        }
-
-        stage('Run Subscriber Script Continuously') {
-            steps {
-                script {
-                    sh """
-                        nohup python3 $SUBSCRIBER_PATH > subscriber.log 2>&1 &
-                    """
+                withCredentials([usernamePassword(credentialsId: 'GRAFANA_CREDENTIALS', usernameVariable: 'GRAFANA_USER', passwordVariable: 'GRAFANA_PASS')]) {
+                    script {
+                        sh '''
+                            curl -u $GRAFANA_USER:$GRAFANA_PASS http://localhost:3000/api/health || echo "Grafana not reachable"
+                        '''
+                    }
                 }
             }
         }
@@ -80,6 +71,16 @@ pipeline {
                 script {
                     sh '''
                         bash -c "source $VENV_DIR/bin/activate && pip list"
+                    '''
+                }
+            }
+        }
+
+        stage('Run EC2 Subscriber') {
+            steps {
+                script {
+                    sh '''
+                        nohup python3 $SUBSCRIBER_PATH &
                     '''
                 }
             }
