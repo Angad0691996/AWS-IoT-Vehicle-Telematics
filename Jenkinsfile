@@ -46,8 +46,9 @@ pipeline {
                     cd "$APP_DIR"
                     python3 -m venv $VENV_NAME
 
-                    # Ensure proper permissions for virtual environment
+                    # Ensure proper permissions for virtual environment and scripts
                     sudo chmod -R 755 "$APP_DIR/$VENV_NAME"
+                    sudo chmod +x "$APP_DIR/ec2_subscriber.py"
 
                     # Activate the virtual environment
                     . "$APP_DIR/$VENV_NAME/bin/activate"
