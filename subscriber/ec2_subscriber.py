@@ -18,7 +18,7 @@ CERTIFICATE = os.path.abspath("device certificate.crt")
 # MySQL Database Configuration
 DB_CONFIG = {
     "host": "localhost",
-    "user": "root",
+    "user": "iot_user",
     "password": "Mycloud@25",  # Replace with your real password
     "database": "vehicle_data"
 }
