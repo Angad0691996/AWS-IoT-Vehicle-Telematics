@@ -5,7 +5,7 @@ pipeline {
         REPO_URL = 'https://github.com/Angad0691996/AWS-IoT-Vehicle-Telematics.git'
         GIT_BRANCH = 'angad'
         BASE_DIR = '/home/ubuntu'
-        CLONE_DIR = '/home/ubuntu/AWS-IoT-Vehicle-Telematics'
+        CLONE_DIR = "${BASE_DIR}/AWS-IoT-Vehicle-Telematics"
         SCRIPT_DIR = "${CLONE_DIR}/scripts"
         APP_DIR = "${CLONE_DIR}/AWS_Ec2_subscriber"
         VENV_NAME = "myenv"
@@ -20,9 +20,11 @@ pipeline {
         stage('Clone Git Repo') {
             steps {
                 sh """
+                    set -e
                     cd "$BASE_DIR"
                     rm -rf AWS-IoT-Vehicle-Telematics
                     git clone -b $GIT_BRANCH $REPO_URL
+                    ls "$APP_DIR"
                 """
             }
         }
@@ -72,6 +74,7 @@ EOF
                     sudo systemctl daemon-reload
                     sudo systemctl enable $SERVICE_NAME
                     sudo systemctl restart $SERVICE_NAME
+                    sudo systemctl status $SERVICE_NAME --no-pager
                 """
             }
         }
