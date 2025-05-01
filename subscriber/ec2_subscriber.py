@@ -13,7 +13,7 @@ TOPIC = "vehicle/data"
 # Absolute Paths to Certificates
 ROOT_CA = os.path.abspath("AmazonRootCA1.pem")
 PRIVATE_KEY = os.path.abspath("private.key")
-CERTIFICATE = os.path.abspath("device certificate.crt")
+CERTIFICATE = os.path.abspath("device_certificate.crt")
 
 # MySQL Database Configuration
 DB_CONFIG = {
