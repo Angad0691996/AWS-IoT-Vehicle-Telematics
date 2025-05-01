@@ -1,14 +1,15 @@
 import os
 import random
-from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 import json
 import time
 from datetime import datetime
+from AWSIoTPythonSDK.MQTTLib import AWSIoTMQTTClient
 
 # AWS IoT Core Details
 ENDPOINT = "axpjfhduaw82h-ats.iot.ap-south-1.amazonaws.com"
 CLIENT_ID = "angad_publisher"
 TOPIC = "vehicle/data"
+LWT_TOPIC = "vehicle/status"
 
 # Absolute Paths to Certificates
 ROOT_CA = os.path.abspath("AmazonRootCA1.pem")
@@ -19,6 +20,9 @@ CERTIFICATE = os.path.abspath("device certificate.crt")
 mqtt_client = AWSIoTMQTTClient(CLIENT_ID)
 mqtt_client.configureEndpoint(ENDPOINT, 8883)
 mqtt_client.configureCredentials(ROOT_CA, PRIVATE_KEY, CERTIFICATE)
+
+# Configure Last Will and Testament (LWT) to notify when subscriber is offline
+mqtt_client.configureLastWill(LWT_TOPIC, "Subscriber is offline", QoS=1, retain=True)
 
 # Connect to AWS IoT Core
 mqtt_client.connect()
@@ -35,10 +39,17 @@ def generate_payload():
         "location": location
     }
 
-# Publish Data Every 5 Seconds
+# Publish Data Every 10 Seconds
 while True:
     vehicle_data = generate_payload()
     payload = json.dumps(vehicle_data)
-    mqtt_client.publish(TOPIC, payload, 1)
-    print(f"Published: {payload}")
-    time.sleep(5)
+
+    # Try to publish data
+    try:
+        # Publish the data to the topic
+        mqtt_client.publish(TOPIC, payload, QoS=1)
+        print(f"Published: {payload}")
+    except Exception as e:
+        print(f"Failed to publish data: {e}")
+
+    time.sleep(10)
