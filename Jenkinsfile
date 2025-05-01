@@ -7,7 +7,7 @@ pipeline {
         BASE_DIR = '/home/ubuntu'
         CLONE_DIR = "${BASE_DIR}/AWS-IoT-Vehicle-Telematics"
         SCRIPT_DIR = "${CLONE_DIR}/scripts"
-        APP_DIR = "${CLONE_DIR}/AWS_Ec2_subscriber"
+        APP_DIR = "${CLONE_DIR}/AWS Ec2 subscriber"
         VENV_NAME = "myenv"
         DB_USER = "iot_user"
         DB_PASSWORD = "Mycloud@25"
