@@ -71,7 +71,7 @@ After=network.target mysql.service
 [Service]
 User=ubuntu
 WorkingDirectory=$APP_DIR
-ExecStart=/bin/bash -c '. $APP_DIR/$VENV_NAME/bin/activate && python $APP_DIR/ec2_subscriber.py'
+ExecStart=/bin/bash -c '. $APP_DIR/$VENV_NAME/bin/activate && python3 $APP_DIR/ec2_subscriber.py'
 Restart=always
 
 [Install]
