@@ -1,98 +1,85 @@
 pipeline {
-    agent any
+    agent { label 'iot' }
+
     environment {
-        APP_DIR = "/opt/iot-app"
-        VENV_DIR = "$APP_DIR/venv"
-        SUBSCRIBER_PATH = "AWS-IoT-Vehicle-Telematics/Edge device publisher/ec2_subscriber.py"
+        REPO_URL = 'https://github.com/Angad0691996/AWS-IoT-Vehicle-Telematics.git'
+        GIT_BRANCH = 'angad'
+        BASE_DIR = '/home/ubuntu'
+        CLONE_DIR = '/home/ubuntu/AWS-IoT-Vehicle-Telematics'
+        SCRIPT_DIR = "${CLONE_DIR}/scripts"
+        APP_DIR = "${CLONE_DIR}/AWS Ec2 subcriber"
+        VENV_NAME = "myenv"
+        DB_USER = "iot_user"
+        DB_PASSWORD = "Mycloud@25"
+        DB_HOST = "localhost"
+        DB_NAME = "vehicle_data"
+        SERVICE_NAME = "subscriber.service"
     }
+
     stages {
-        stage('Install System Packages') {
+        stage('Clone Git Repo') {
             steps {
-                script {
-                    sh '''
-                        sudo apt update
-                        sudo apt install -y python3 python3-venv python3-pip mysql-client
-                    '''
-                }
+                sh """
+                    cd "$BASE_DIR"
+                    rm -rf AWS-IoT-Vehicle-Telematics
+                    git clone -b $GIT_BRANCH $REPO_URL
+                """
             }
         }
 
-        stage('Setup Python Virtual Environment') {
+        stage('Create MySQL Table') {
             steps {
-                script {
-                    sh '''
-                        sudo mkdir -p $APP_DIR
-                        sudo chown -R jenkins:jenkins $APP_DIR  # Ensure Jenkins can write
-                        
-                        if [ ! -d "$VENV_DIR" ]; then
-                            python3 -m venv $VENV_DIR
-                        fi
-                    '''
-                }
+                sh """
+                    mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD $DB_NAME < "$SCRIPT_DIR/create_table.sql"
+                """
             }
         }
 
-        stage('Activate Virtual Env & Install Dependencies') {
+        stage('Set up Python Virtual Environment') {
             steps {
-                script {
-                    sh '''
-                        bash -c "source $VENV_DIR/bin/activate && pip install --upgrade pip && pip install -r requirements.txt || echo 'requirements.txt not found, skipping...'"
-                    '''
-                }
+                sh """
+                    # Install python3-venv if not present
+                    sudo apt-get update
+                    sudo apt-get install -y python3-venv
+
+                    # Create and activate virtual environment
+                    cd "$APP_DIR"
+                    python3 -m venv $VENV_NAME
+                    source $VENV_NAME/bin/activate
+
+                    # Install Python dependencies
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                """
             }
         }
 
-        stage('Verify MySQL Connection') {
+        stage('Create systemd Service') {
             steps {
-                withCredentials([string(credentialsId: 'MYSQL_ROOT_PASSWORD', variable: 'DB_ROOT_PASS')]) {
-                    script {
-                        sh '''
-                            mysql -uroot -p$DB_ROOT_PASS -h localhost -e "SHOW DATABASES;"
-                        '''
-                    }
-                }
-            }
-        }
+                sh """
+                    # Create systemd service file
+                    cat <<EOF | sudo tee /etc/systemd/system/$SERVICE_NAME
+[Unit]
+Description=IoT EC2 Subscriber Service
+After=network.target mysql.service
 
-        stage('Verify Grafana Connection') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'GRAFANA_CREDENTIALS', usernameVariable: 'GRAFANA_USER', passwordVariable: 'GRAFANA_PASS')]) {
-                    script {
-                        sh '''
-                            curl -u $GRAFANA_USER:$GRAFANA_PASS http://localhost:3000/api/health || echo "Grafana not reachable"
-                        '''
-                    }
-                }
-            }
-        }
+[Service]
+User=ubuntu
+WorkingDirectory=$APP_DIR
+ExecStart=/bin/bash -c 'source $APP_DIR/$VENV_NAME/bin/activate && python $APP_DIR/ec2_subscriber.py'
+Restart=always
 
-        stage('Verify Installation') {
-            steps {
-                script {
-                    sh '''
-                        bash -c "source $VENV_DIR/bin/activate && pip list"
-                    '''
-                }
-            }
-        }
+[Install]
+WantedBy=multi-user.target
+EOF
 
-        stage('Run EC2 Subscriber') {
-            steps {
-                script {
-                    sh '''
-                        nohup python3 $SUBSCRIBER_PATH &
-                    '''
-                }
+                    # Reload and start service
+                    sudo systemctl daemon-reexec
+                    sudo systemctl daemon-reload
+                    sudo systemctl enable $SERVICE_NAME
+                    sudo systemctl restart $SERVICE_NAME
+                """
             }
-        }
-    }
-
-    post {
-        failure {
-            echo "❌ Installation Failed! Check logs for errors."
-        }
-        success {
-            echo "✅ Installation Successful!"
         }
     }
 }
