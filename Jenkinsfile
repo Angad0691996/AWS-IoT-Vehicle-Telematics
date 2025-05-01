@@ -7,7 +7,7 @@ pipeline {
         BASE_DIR = '/home/ubuntu'
         CLONE_DIR = "${BASE_DIR}/AWS-IoT-Vehicle-Telematics"
         SCRIPT_DIR = "${CLONE_DIR}/scripts"
-        APP_DIR = "${CLONE_DIR}/AWS Ec2 subcriber"
+        APP_DIR = "${CLONE_DIR}/subscriber"  // Updated to "subscriber"
         VENV_NAME = "myenv"
         DB_USER = "iot_user"
         DB_PASSWORD = "Mycloud@25"
@@ -45,9 +45,9 @@ pipeline {
 
                     cd "$APP_DIR"
                     python3 -m venv $VENV_NAME
-                    . $VENV_NAME/bin/activate
-                    $APP_DIR/$VENV_NAME/bin/pip install --upgrade pip
-                    $APP_DIR/$VENV_NAME/bin/pip install -r requirements.txt
+                    . "$APP_DIR/$VENV_NAME/bin/activate"
+                    "$APP_DIR/$VENV_NAME/bin/pip" install --upgrade pip
+                    "$APP_DIR/$VENV_NAME/bin/pip" install -r "$APP_DIR/requirements.txt"
                 """
             }
         }
