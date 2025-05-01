@@ -45,6 +45,11 @@ pipeline {
 
                     cd "$APP_DIR"
                     python3 -m venv $VENV_NAME
+
+                    # Ensure proper permissions for virtual environment
+                    sudo chmod -R 755 "$APP_DIR/$VENV_NAME"
+
+                    # Activate virtual environment and install dependencies
                     . "$APP_DIR/$VENV_NAME/bin/activate"
                     "$APP_DIR/$VENV_NAME/bin/pip" install --upgrade pip
                     "$APP_DIR/$VENV_NAME/bin/pip" install -r "$APP_DIR/requirements.txt"
@@ -70,6 +75,7 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
+                    # Reload and restart systemd to enable the new service
                     sudo systemctl daemon-reexec
                     sudo systemctl daemon-reload
                     sudo systemctl enable $SERVICE_NAME
