@@ -49,10 +49,12 @@ pipeline {
                     # Ensure proper permissions for virtual environment
                     sudo chmod -R 755 "$APP_DIR/$VENV_NAME"
 
-                    # Activate virtual environment and install dependencies
+                    # Activate the virtual environment
                     . "$APP_DIR/$VENV_NAME/bin/activate"
-                    "$APP_DIR/$VENV_NAME/bin/pip" install --upgrade pip
-                    "$APP_DIR/$VENV_NAME/bin/pip" install -r "$APP_DIR/requirements.txt"
+
+                    # Now you can use 'python' and 'pip' directly as the virtual environment is activated
+                    python -m pip install --upgrade pip
+                    python -m pip install -r "$APP_DIR/requirements.txt"
                 """
             }
         }
