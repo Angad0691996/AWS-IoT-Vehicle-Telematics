@@ -45,7 +45,9 @@ mqtt_client.configureCredentials(ROOT_CA, PRIVATE_KEY, CERTIFICATE)
 # Callback Function to Handle Incoming Messages
 def message_callback(client, userdata, message):
     try:
+        print(f"Raw Message Payload: {message.payload}")
         data = json.loads(message.payload)
+        print(f"Parsed Data: {data}")
 
         vehicle_id = data.get("vehicle_ID")
         speed = data.get("Speed")
