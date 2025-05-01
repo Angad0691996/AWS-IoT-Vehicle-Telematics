@@ -46,8 +46,8 @@ pipeline {
                     cd "$APP_DIR"
                     python3 -m venv $VENV_NAME
                     . $VENV_NAME/bin/activate
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
+                    $APP_DIR/$VENV_NAME/bin/pip install --upgrade pip
+                    $APP_DIR/$VENV_NAME/bin/pip install -r requirements.txt
                 """
             }
         }
