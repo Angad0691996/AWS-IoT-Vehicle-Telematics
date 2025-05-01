@@ -38,16 +38,12 @@ pipeline {
         stage('Set up Python Virtual Environment') {
             steps {
                 sh """
-                    # Install python3-venv if not present
                     sudo apt-get update
                     sudo apt-get install -y python3-venv
 
-                    # Create and activate virtual environment
                     cd "$APP_DIR"
                     python3 -m venv $VENV_NAME
-                    source $VENV_NAME/bin/activate
-
-                    # Install Python dependencies
+                    . $VENV_NAME/bin/activate
                     pip install --upgrade pip
                     pip install -r requirements.txt
                 """
@@ -57,7 +53,6 @@ pipeline {
         stage('Create systemd Service') {
             steps {
                 sh """
-                    # Create systemd service file
                     cat <<EOF | sudo tee /etc/systemd/system/$SERVICE_NAME
 [Unit]
 Description=IoT EC2 Subscriber Service
@@ -66,14 +61,13 @@ After=network.target mysql.service
 [Service]
 User=ubuntu
 WorkingDirectory=$APP_DIR
-ExecStart=/bin/bash -c 'source $APP_DIR/$VENV_NAME/bin/activate && python $APP_DIR/ec2_subscriber.py'
+ExecStart=/bin/bash -c '. $APP_DIR/$VENV_NAME/bin/activate && python $APP_DIR/ec2_subscriber.py'
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-                    # Reload and start service
                     sudo systemctl daemon-reexec
                     sudo systemctl daemon-reload
                     sudo systemctl enable $SERVICE_NAME
